@@ -1,2 +1,1 @@
-Projekt polegał na przeprowadzeniu analizy danych, a następnie stworzeniu drzewa klasyfikacyjnego dla osób przebadanych pod kątem cukrzycy. 
-Składa się on z aplikacji shiny oraz prezentacji stworzonych w RStudio. 
+Projekt obejmował przeprowadzenie szczegółowej analizy danych osób poddanych badaniom w kontekście cukrzycy. Zastosowano metodę drzewa klasyfikacyjnego, aby zidentyfikować kluczowe czynniki wpływające na diagnozę cukrzycy oraz stworzenie modelu prognozującego. Cały proces analizy danych oraz modelowania został przedstawiony w prezentacji utworzonej przy użyciu języka R. Dodatkowo, wyniki analizy zostały dostarczone w formie interaktywnej aplikacji Shiny, co umożliwia użytkownikom łatwe zrozumienie i przeglądanie wyników prognoz. 

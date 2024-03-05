@@ -1,0 +1,135 @@
+slides > slide {
+  background: linear-gradient(#B0C4DE, #4169E1);
+  background-color: lightblue;
+  overflow:-x: auto !important;
+  overflow-y: auto !important;
+}
+
+.title-slide hgroup {
+  bottom: 100px;
+}
+
+/* Title slide title */
+.title-slide hgroup h1 {
+  font-family: "Times New Roman", sans-serif;
+  font-size: 90px;
+  font-weight: bold;
+  line-height: 1.1;
+  letter-spacing: -3px;
+  color: white;
+  position: relative;
+  left: -6px;
+}
+/* Title slide paragraph */
+.title-slide hgroup p {
+  font-family: "Times New Roman", sans-serif;
+  font-size: 40px;
+  font-weight: 250;
+  color: black;
+  line-height: 1.3;
+  margin-top: 2em;
+}
+/* Footnotes */
+.footer {
+  position: absolute;
+  bottom: 0;
+  margin-bottom: 3px;
+  width: 90%;
+  font-size: 0.6em;
+  background-color: white;
+  color: black;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Background colour for code blocks */
+.prettyprint {
+  background-color: white;
+}
+p {
+  font-family: "Merriweather", Serif;
+  font-size: 23px;
+  color: #003669;
+}
+ul {
+  font-family: "Merriweather", Serif;
+  color: #003669;
+  font-size: 23px;
+}
+li {
+  font-family: "Merriweather", Serif;
+  color: #003669;
+  font-size: 23px;
+}
+h2 {
+  font-family: "Times New Roman", sans-serif;
+  color: white;
+  font-weight: bold;
+  font-size: 50px;
+  line-height: 70px;
+  position: relative;
+  top: -15px;
+  margin-bottom: -55px;
+}
+h4 {
+  font-family: "Times New Roman", sans-serif;
+  color: white;
+  font-weight: bold;
+}
+
+/* Hyperlinks */
+a {
+  color: darkblue;
+  text-decoration: none;
+  border-bottom: 1px solid darkblue;
+}
+
+a:hover {
+  color: black !important;
+    border-bottom: 1px solid black;
+}
+
+table.rmdtable {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.rmdtable th, table.rmdtable td {
+  padding: 5px;
+  text-align: center;
+}
+/* Table header */
+table.rmdtable th {
+  color: white;
+  font-size: 18px;
+  background: #5D697D;
+}
+
+/* Table odd rows */
+table.rmdtable tr:nth-child(odd) {
+  background: #f2f4f8;
+  color: #003669;
+}
+
+/* Table even rows */
+table.rmdtable tr:nth-child(even) {
+  background: #e0e5ea;
+  color: #003669;
+}
+
+/* Table first column
+* NB change font-weight: to "normal" to stop the first column being bold
+*/
+table.rmdtable tr > td:first-child, table th {
+  font-weight: 600;
+  color: #003669;
+}
+
+/* Non-R code blocks */
+pre {
+  background: white;
+  color: #6c7e9c;
+}
+img { 
+  max-width:100%; 
+  height: auto; 
+}

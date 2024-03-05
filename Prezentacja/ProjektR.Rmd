@@ -1,0 +1,266 @@
+---
+title: "Drzewo klasyfikacyjne"
+author: "Justyna Sarkowicz, Dariusz Różycki"
+date: "2023-12-21"
+output: 
+  ioslides_presentation:
+    css: style.css
+    logo: logo.png
+    df_print: kable
+---
+
+## Wprowadzenie
+Celem naszego projektu jest przeprowadzenie wstępnej analizy danych, a następnie stworzenie drzewa klasyfikacyjnego dla osób przebadanych pod kątem cukrzycy oraz przeprowadzenie prognoz.
+
+<div class="footer"> Dane pochodzą z pakietu MASS. </div>
+
+#### Krótko o danych
+Dane dotyczą populacji kobiet z plemienia Pima w wieku co najmniej 21 lat, mieszkających w pobliżu Phoenix w Arizonie, które zostały przebadane pod kątem cukrzycy zgodnie z kryteriami Światowej Organizacji Zdrowia. Dane zebrał amerykański Narodowy Instytut Cukrzycy oraz Chorób Trawiennych i Nerek.
+
+## Instalacja pakietów i wczytanie danych
+```{r, include = FALSE}
+options(repos = c(CRAN = "https://cloud.r-project.org")) 
+```
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+install.packages("MASS")
+install.packages("ggplot2")
+install.packages("rpart")
+install.packages("rpart.plot")
+install.packages("corrplot")
+install.packages("cowplot")
+install.packages("tidyr")
+```
+```{r, message=FALSE, warning=FALSE}
+library(moments)
+library(dplyr)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(MASS)
+library(corrplot)
+library(cowplot)
+library(tidyr)
+data("Pima.tr")
+```
+
+#### Podział pracy
+- Dariusz Różycki - aplikacja Shiny
+- Justyna Sarkowicz - prezentacja
+
+## Wyjaśnienie atrybutów {.build}
+W naszej analizie skorzystaliśmy z wybranych zmiennych:
+
+- **glu** - stężenie glukozy w osoczu w doustnym teście tolerancji glukozy
+
+- **bp** - rozkurczowe ciśnienie krwi (mm Hg)
+
+- **bmi** - wskaźnik masy ciała 
+
+- **age** - wiek
+
+- **type** - zmienna wynikowa (yes - oznacza obecność cukrzycy, no - oznacza jej brak)
+
+#### Braki danych
+```{r}
+sum(is.na(Pima.tr))
+```
+W danych nie ma żadnych braków.
+
+## Zapoznanie się z danymi
+Wstępna obróbka danych, aby przygotować je do dalszej części analizy:
+```{r, echo = TRUE}
+Pima.tr <- Pima.tr[, -c(1,4,6)]
+names(Pima.tr) <- c("Glukoza", "Ciśnienie", "BMI", "Wiek", "Cukrzyca")
+head(Pima.tr)
+```
+
+## Korelacja
+Sprawdzam korelacje danych:
+
+<div class = "center" style="width: 800px">
+```{r, echo = F, fig.height=2.7, out.width="100%"}
+numeric_columns <- Pima.tr[sapply(Pima.tr, is.numeric)]
+c <- cor(numeric_columns, method = "spearman")
+corrplot(c, method = "circle" )
+```
+</div>
+Wraz z wiekiem starzeją się również naczynia tętnicze i może do chodzić do ich usztywnienia, powoduje to więc wzrost ciśnienia. Ze względu na fakt, iż z wiekiem różne mechanizmy, odpowiadające za metabolizm cukrów mogą się rozregulowywać, ponadto starsi często przyjmują wiele leków, mogących wpływać na poziom glukozy. Stąd wynika silna dodatnia korelacja zmiennej wiek i ciśnienie oraz glukoza. 
+
+## Podstawowe statystyki 
+Przedstawiam podstawowe statystyki opisowe zmiennych: minimum, kwantyle, mediane, maximum, średnią, odchylenie standardowe, skośność, kurtoze:
+
+```{r, echo=FALSE}
+result_table <- data.frame(Variable = character(0), Min = numeric(0), Q1 = numeric(0), Median = numeric(0),
+                           Q3 = numeric(0), Max = numeric(0), Mean = numeric(0), SD = numeric(0),
+                           Skewness = numeric(0), Kurtosis = numeric(0))
+
+for (col in colnames(Pima.tr)) {
+  if (is.numeric(Pima.tr[[col]])) {
+    result_table <- rbind(result_table, c(
+      Variable = col,
+      Min = round(min(Pima.tr[[col]]), 2),
+      Q1 = round(quantile(Pima.tr[[col]], 0.25), 2),
+      Median = round(median(Pima.tr[[col]]), 2),
+      Q3 = round(quantile(Pima.tr[[col]], 0.75), 2),
+      Max = round(max(Pima.tr[[col]]), 2),
+      Mean = round(mean(Pima.tr[[col]]), 2),
+      SD = round(sd(Pima.tr[[col]]), 2),
+      Skewness = round(skewness(Pima.tr[[col]]), 2),
+      Kurtosis = round(kurtosis(Pima.tr[[col]]), 2)
+    ))
+  }
+}
+colnames(result_table) <- c("Zmienna", "Min", "Q1", "Median", "Q3", "Max", "Mean", "SD", "Skewness", "Kurtosis")
+result_table
+```
+  
+- Widzimy tutaj, że rozkłady dla zmiennych glukoza, ciśnienie i BMI są dość symetryczne. W przypadku glukozy odchylenie od średniej jest dość duże.  
+- Wiek natomiast ma rozkład prawo stronnie skośny. Przeważają osoby młody. Przedział wiekowy to 23-63 lata.
+
+## Wykresy 1
+Zobaczmy jeszcze jak to się prezentuje na wykresach pudełkowych:
+```{r, echo=FALSE, out.width="90%"}
+numeric_columns <- gather(numeric_columns, "variable", "value")
+ggplot(numeric_columns, aes(x = variable, y = value)) +
+    geom_boxplot(color = "royalblue4", fill = "lightblue") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    labs(title = "Wykresy pudełkowe",
+         x = "Zmienna",
+         y = "Wartość")
+```
+Widzimy, że przedział dla glukozy jest bardzo szeroki i pojawiło się pare wartości odstających w zmiennej ciśnienie.
+
+
+## Wykresy 2
+Możemy zobaczyć jeszcze jak prezentują się rozkłady na histogramach:
+```{r, echo=FALSE}
+p1 <- ggplot(Pima.tr, aes(x = Glukoza)) +
+    geom_histogram(color = "royalblue4", fill = "lightblue", bins = 20) +
+    theme_minimal() +
+    labs(x = "Glukoza", y = "Częstość")
+p2 <- ggplot(Pima.tr, aes(x = BMI)) +
+    geom_histogram(color = "royalblue4", fill = "lightblue", bins = 20) +
+    theme_minimal() +
+    labs(x = "BMI", y = "Częstość")
+p3 <- ggplot(Pima.tr, aes(x = Wiek)) +
+    geom_histogram(color = "royalblue4", fill = "lightblue", bins = 20) +
+    theme_minimal() +
+    labs(x = "Wiek", y = "Częstość")
+p4 <- ggplot(Pima.tr, aes(x = Ciśnienie)) +
+    geom_histogram(color = "royalblue4", fill = "lightblue", bins = 20) +
+    theme_minimal() +
+    labs(x = "Ciśnienie", y = "Częstość")
+plot_grid(p1, p2, p3, p4, labels = c("A", "B", "C", "D") )
+```
+
+## Drzewo decyzyjne
+**Drzewo klasyfikacyjne** wykorzystuje się do wyznaczania przynależności przypadków lub obiektów do klas jakościowej zmiennej zależnej na podstawie pomiarów jednej lub więcej zmiennych objaśniających (predyktorów). Analiza drzew klasyfikacyjnych jest jedną z podstawowych technik wykorzystywanych w tzw. Zgłębianiu danych.
+Celem analizy opartej na tym modelu jest przewidywanie lub wyjaśnianie odpowiedzi (reakcji) zakodowanych w danej zmiennej.  
+Wyniki prezenetowane są w postaci grafu.
+
+## Sposób tworzenia drzewa
+1. **Budowa Drzewa**: Algorytm zaczyna od korzenia drzewa i podziela zbiór danych na podzbiory na podstawie pewnych kryteriów. Kryteria te są wybierane w sposób, który maksymalizuje jednolitość wewnątrz podgrup i jednocześnie minimalizuje zróżnicowanie między nimi.
+2. **Podział na Węzły**: Każdy węzeł w drzewie reprezentuje test na jednej zmiennych. W zależności od wyniku tego testu, obserwacje są kierowane w dół drzewa, do lewego lub prawego poddrzewa.
+3. **Liście Drzewa**: Końcowe węzły, zwane liśćmi, reprezentują prognozy dla danych. Dla problemu klasyfikacji liście oznaczają przewidywane klasy, a dla regresji reprezentują przewidywane wartości numeryczne.
+4. **Proces Rekurencyjny**: Proces podziału i budowy drzewa jest powtarzany rekurencyjnie aż do osiągnięcia pewnego warunku zatrzymującego, takiego jak maksymalna głębokość drzewa, minimalna liczba próbek w liściu, czy brak dalszych podziałów poprawiających model.
+
+## Podjęcie decyzji
+Informacje o podziale drzewa dla zmiennej **Cukrzyca**:
+```{r pressure, echo=FALSE, out.height="70%"}
+tree <- rpart(Cukrzyca ~ ., data = Pima.tr)
+tree
+```
+## Drzewo 
+Drzewo klasyfikacyjnego dla zmiennej **Cukrzyca**
+```{r, echo=FALSE}
+rpart.plot(tree, yesno = 2)
+```
+
+## Wnioski
+
+<div class="columns-2" style="display: flex;">
+
+<div style="width: 600px;">
+
+![](drzewo.png)
+
+</div>
+
+<div style="width: 900px;">
+
+- W największej grupie ryzyka zachorowania na cukrzycę są osoby, które mają wysoki poziom glukozy (powyżej 124) oraz wysokie BMI (powyżej 29). W większości przypadków osoby te chorują na cukrzyce. Warto zauważyć, że w tej grupie decyzja o cukrzycy jest często trafna.   
+- Drzewo decyzyjne sugeruje, że osoby młodsze (poniżej 29 lat) z niskim poziomem glukozy (poniżej 124) mają tendencję do mniejszego ryzyka cukrzycy. 
+
+</div>
+
+</div>
+
+## Prognoza
+
+Przeprowadzenia prognozy:
+```{r}
+newdata <- Pima.tr
+table(Pima.tr$Cukrzyca, predict(tree, Pima.tr, type = "class"))
+```
+Prognozy dla osób o następujących parametrach:
+
+```{r, echo=FALSE}
+d1 <- data.frame(Osoba = c(1, 2, 3, 4), Ciśnienie = c(150, 120, 50, 40), BMI = c(30, 40, 23, 47), Wiek = c(70, 18, 40, 52), Glukoza = c(63, 170, 140, 180))
+d1
+```
+
+```{r, echo=FALSE}
+d1 <- d1[,-1]
+predict(tree, d1, type = "class")
+```
+
+## Obsługa shiny
+
+<div class="columns-2" style="display: flex;">
+
+<div style="width: 600px;">
+
+#### Panel boczny
+
+![](shiny1.png)
+![](shiny2.png)
+
+</div>
+
+<div style="width: 950px;">
+
+#### Funkcjonalności
+
+- **Tabela** - wyświetla interaktywną tabele z danymi.
+- **Statystyki** - wyświetla statystyki opisowe, dla zmiennej wybranej przez użytkownika
+- **Wykresy** - wyświetla wykresy, dla zmiennej wybranej przez użytkownika. Dostępnę są również do wyboru różne typy wykresów (pudełkowy, histigram, gęstości, macierz korealacji), które w zależności od typu posiadają dodatkowe pozwalające użytkownikowi dopasować wygląd do jego potrzeb.
+- **Drzewo** - wyświetla drzewo klasyfikacyjno-regresyjne
+- **Prognoza** - interaktywna prognoza cukrzycy, w zależności od wybranych parametrów przez użytkownika   
+
+</div>
+
+</div>  
+
+
+## Bibliografia
+
+- https://www.statsoft.pl/textbook/stathome_stat.html?https%3A%2F%2Fwww.statsoft.pl%2Ftextbook%2Fstcart.html
+
+- https://predictivesolutions.pl/wykorzystanie-drzew-regresyjnych-do-analizy-wartosci-zakupow-cz-1
+
+- https://www.statystyka.az.pl/analiza-skupien/metoda-cart.php
+
+
+
+
+
+
+
+
+
+
+
+
+
+
